@@ -223,11 +223,12 @@ impl<'a> OrderManager<'a> {
             "url": challenge_url,
         });
 
-        // Empty payload triggers validation
-        // POST-as-GET: the payload must be the empty string, not `{}` —
-        // Boulder rejects the object encoding with
-        // "POST-as-GET requests must have an empty payload".
-        let jws = signer.sign_empty(&header)?;
+        // Initiating a challenge requires a POST with an empty *object*
+        // payload (`{}`); an empty string is a POST-as-GET, which only
+        // fetches the current challenge state and never triggers
+        // validation (RFC 8555 section 7.5.1, Boulder wfe2.postChallenge).
+        let payload = json!({});
+        let jws = signer.sign(&header, &payload)?;
 
         let response = self
             .http_client
