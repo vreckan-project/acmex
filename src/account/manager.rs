@@ -20,7 +20,10 @@ pub struct Account {
     /// The current status of the account (e.g., "valid", "deactivated", "revoked").
     pub status: String,
 
-    /// A list of contact URIs (e.g., "mailto:admin@example.com").
+    /// A list of contact URIs (e.g., "mailto:admin@example.com"). Some CAs
+    /// (Let's Encrypt/Boulder) omit the field entirely when the account has
+    /// no contacts; default it so a contact-less account still parses.
+    #[serde(default)]
     pub contact: Vec<String>,
 
     /// Indicates if the user has agreed to the terms of service.
