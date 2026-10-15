@@ -313,7 +313,11 @@ impl AcmeClient {
         // Poll order until ready
         tracing::info!("Polling order status until ready...");
         order = order_mgr
-            .poll_order(&order_url, 30, Duration::from_secs(2))
+            // DNS-01 validation can take several minutes on the CA side
+            // (first attempts fail while the DNS change propagates and are
+            // retried on a multi-minute cadence); 30 x 2s was not enough
+            // for Let's Encrypt. Budget 5 minutes per stage (vreckan ANT-138).
+            .poll_order(&order_url, 150, Duration::from_secs(2))
             .await?;
 
         if order.status != "ready" {
@@ -337,7 +341,11 @@ impl AcmeClient {
         // Poll until valid
         tracing::info!("Polling order status until valid...");
         let order = order_mgr
-            .poll_order(&order_url, 30, Duration::from_secs(2))
+            // DNS-01 validation can take several minutes on the CA side
+            // (first attempts fail while the DNS change propagates and are
+            // retried on a multi-minute cadence); 30 x 2s was not enough
+            // for Let's Encrypt. Budget 5 minutes per stage (vreckan ANT-138).
+            .poll_order(&order_url, 150, Duration::from_secs(2))
             .await?;
 
         if order.status != "valid" {
