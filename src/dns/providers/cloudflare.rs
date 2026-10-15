@@ -64,10 +64,68 @@ struct CloudFlareRecordResult {
     id: String,
 }
 
+/// A single record in a zone record list response.
+#[derive(Debug, Deserialize)]
+struct CloudFlareRecordListEntry {
+    /// The unique ID of the DNS record.
+    id: String,
+    /// The record name.
+    #[serde(default)]
+    name: String,
+    /// The record content.
+    #[serde(default)]
+    content: String,
+}
+
+/// A zone record list response.
+#[derive(Debug, Deserialize)]
+struct CloudFlareRecordListResponse {
+    /// The matching records.
+    #[serde(default)]
+    result: Vec<CloudFlareRecordListEntry>,
+}
+
 #[async_trait]
 impl DnsProvider for CloudFlareDnsProvider {
     /// Creates a TXT record for the DNS-01 challenge.
     async fn create_txt_record(&self, domain: &str, value: &str) -> Result<String> {
+        // Idempotent create: Cloudflare rejects a duplicate (name, type,
+        // content) with error 81058 "An identical record already exists".
+        // That is the right outcome when a previous run left the record in
+        // place (e.g. a reused authorization keeps the same token, so the
+        // digest is unchanged) — reuse the existing record's ID instead of
+        // failing the issuance.
+        let list_url = format!(
+            "https://api.cloudflare.com/client/v4/zones/{}/dns_records?type=TXT&name={}",
+            self.config.zone_id, domain
+        );
+        let list_response = self
+            .http_client
+            .get(list_url)
+            .bearer_auth(&self.config.api_token)
+            .send()
+            .await
+            .map_err(|e| {
+                tracing::error!("Network error while listing CloudFlare records: {}", e);
+                AcmeError::transport(format!("CloudFlare list records failed: {}", e))
+            })?;
+        if list_response.status().is_success() {
+            if let Ok(listed) = list_response.json::<CloudFlareRecordListResponse>().await {
+                if let Some(existing) = listed
+                    .result
+                    .iter()
+                    .find(|r| r.name == domain && r.content == value)
+                {
+                    tracing::info!(
+                        "Reusing existing CloudFlare TXT record {} for domain: {}",
+                        existing.id,
+                        domain
+                    );
+                    return Ok(existing.id.clone());
+                }
+            }
+        }
+
         tracing::info!("Creating CloudFlare TXT record for domain: {}", domain);
         let url = format!(
             "https://api.cloudflare.com/client/v4/zones/{}/dns_records",

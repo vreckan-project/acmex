@@ -99,6 +99,14 @@ fn certificate_params_for_identifiers(identifiers: &[Identifier]) -> Result<Cert
         ));
     }
     let mut params = CertificateParams::default();
+    // rcgen's default subject is CN="rcgen self signed cert"; Boulder
+    // validates the subject CN as a domain name and rejects the spaces
+    // ("Domain name contains an invalid character"), so use the first
+    // identifier as the CN.
+    params.distinguished_name = rcgen::DistinguishedName::new();
+    params
+        .distinguished_name
+        .push(rcgen::DnType::CommonName, identifiers[0].acme_value());
     params.subject_alt_names = san_types_for_identifiers(identifiers)?;
     Ok(params)
 }
