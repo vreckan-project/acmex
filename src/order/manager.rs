@@ -120,8 +120,10 @@ impl<'a> OrderManager<'a> {
             "url": order_url,
         });
 
-        let payload = json!({});
-        let jws = signer.sign(&header, &payload)?;
+        // POST-as-GET: the payload must be the empty string, not `{}` —
+        // Boulder rejects the object encoding with
+        // "POST-as-GET requests must have an empty payload".
+        let jws = signer.sign_empty(&header)?;
 
         let response = self
             .http_client
@@ -168,8 +170,10 @@ impl<'a> OrderManager<'a> {
             "url": auth_url,
         });
 
-        let payload = json!({});
-        let jws = signer.sign(&header, &payload)?;
+        // POST-as-GET: the payload must be the empty string, not `{}` —
+        // Boulder rejects the object encoding with
+        // "POST-as-GET requests must have an empty payload".
+        let jws = signer.sign_empty(&header)?;
 
         let response = self
             .http_client
@@ -220,8 +224,10 @@ impl<'a> OrderManager<'a> {
         });
 
         // Empty payload triggers validation
-        let payload = json!({});
-        let jws = signer.sign(&header, &payload)?;
+        // POST-as-GET: the payload must be the empty string, not `{}` —
+        // Boulder rejects the object encoding with
+        // "POST-as-GET requests must have an empty payload".
+        let jws = signer.sign_empty(&header)?;
 
         let response = self
             .http_client
@@ -368,8 +374,10 @@ impl<'a> OrderManager<'a> {
             "url": certificate_url,
         });
 
-        let payload = json!({});
-        let jws = signer.sign(&header, &payload)?;
+        // POST-as-GET: the payload must be the empty string, not `{}` —
+        // Boulder rejects the object encoding with
+        // "POST-as-GET requests must have an empty payload".
+        let jws = signer.sign_empty(&header)?;
 
         let response = self
             .http_client

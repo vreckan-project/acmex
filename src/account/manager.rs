@@ -308,9 +308,10 @@ impl<'a> AccountManager<'a> {
             "url": account_id,
         });
 
-        let payload = json!({});
-
-        let jws = self.signer.sign(&header, &payload)?;
+        // POST-as-GET: the payload must be the empty string, not `{}` —
+        // Boulder rejects the object encoding with
+        // "POST-as-GET requests must have an empty payload".
+        let jws = self.signer.sign_empty(&header)?;
 
         let response = self
             .http_client
